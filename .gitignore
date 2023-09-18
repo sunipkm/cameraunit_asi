@@ -2,5 +2,5 @@
 /Cargo.lock
 **/*.fit*
 **/*.png
-**/.DS_Store
+**/*.DS_Store
 src/asicamera_2/*
