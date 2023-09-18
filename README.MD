@@ -16,7 +16,7 @@ You can use `cameraunit_asi` to:
 Add this to your `Cargo.toml`:
 ```toml
 [dependencies]
-cameraunit_asi = "1.0.0"
+cameraunit_asi = { git = "https://github.com/sunipkm/cameraunit_asi" }
 ```
 and this to your source code:
 ```rs
@@ -54,4 +54,7 @@ let img = cam
 img.save_fits(Path::new("./"), "test", "asicam_test", true, true)
     .unwrap();
 ```
-Note, that the unused `_caminfo` object implements the `cameraunit::CameraInfo` trait and can be cloned.
+Note, that the unused `_caminfo` object implements the `cameraunit::CameraInfo` trait and can be cloned and passed around
+to multiple threads.
+
+For a more complete example, refer to the test program in [`asicam_rs`](https://github.com/sunipkm/asicam_rs).
