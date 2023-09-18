@@ -155,6 +155,7 @@ pub fn get_camera_ids() -> Option<HashMap<i32, String>> {
 /// # Examples
 ///
 /// ```
+/// use cameraunit_asi::open_camera;
 /// let id: i32 = 0; // some ID obtained using get_camera_ids()
 /// let (mut cam, caminfo) = open_camera(id).unwrap();
 /// // do things with cam
@@ -314,7 +315,9 @@ pub fn open_camera(id: i32) -> Result<(CameraUnit_ASI, CameraInfo_ASI), Error> {
 /// # Examples
 ///
 /// ```
-/// let (mut cam, caminfo) = open_first_camera().unwrap();
+/// use cameraunit_asi::open_first_camera;
+/// 
+/// let (mut cam, caminfo) = open_first_camera().expect("No cameras found");
 /// ```
 pub fn open_first_camera() -> Result<(CameraUnit_ASI, CameraInfo_ASI), Error> {
     let ids = get_camera_ids();
