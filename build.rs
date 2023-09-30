@@ -1,7 +1,7 @@
 extern crate bindgen;
 extern crate cc;
 
-use std::path::PathBuf;
+use std::{path::PathBuf, env};
 
 use bindgen::CargoCallbacks;
 
@@ -45,10 +45,8 @@ fn main() {
         .expect("Unable to generate bindings");
 
     // Write the bindings to the $OUT_DIR/bindings.rs file.
-    let out_path = PathBuf::from("src/asicamera_2/");
-    if !out_path.exists() {
-        std::fs::create_dir(&out_path).expect("Failed to create output directory");
-    }
+    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
+
     let out_path = out_path
         .join("asicamera2_bindings.rs");
 
