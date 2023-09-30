@@ -1,6 +1,6 @@
 [package]
 name = "cameraunit_asi"
-version = "1.0.1"
+version = "1.0.2"
 edition = "2021"
 rust-version = "1.68.0"
 authors = ["Sunip K. Mukherjee"]
@@ -8,7 +8,7 @@ license = "MIT OR Apache-2.0"
 keywords = ["camera", "api", "interface"]
 readme = "README.MD"
 repository = "https://github.com/sunipkm/cameraunit"
-homepage = "https://github.com/sunipkm/cameraunit"
+homepage = "https://crates.io/crates/cameraunit_asi"
 description = """
 An efficient and ergonomic interface to capture images using cameras.
 """
