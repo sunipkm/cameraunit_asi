@@ -67,6 +67,14 @@ img.save_fits(Path::new("./"), "test", "asicam_test", true, true)
 Note, that the unused `_caminfo` object implements the `cameraunit::CameraInfo` trait and can be cloned and passed around
 to multiple threads.
 
-For a more complete example, refer to the test program in the [image capture example](examples/imagecapture.rs).
+For a more complete example, refer to the [bundled program](src/main.rs).
 
-The included example can be run with `cargo run --release --example imagecapture`.
+## Installation
+The example program can be installed using
+```sh
+$ cargo install cameraunit_asi
+```
+and executed using
+```sh
+$ asicamera_capture
+```
