@@ -7,6 +7,7 @@ use std::{
     fmt::Display,
     io::{self, Write},
     mem::MaybeUninit,
+    os::raw,
     str,
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -14,7 +15,6 @@ use std::{
     },
     thread::sleep,
     time::{Duration, SystemTime, UNIX_EPOCH},
-    os::raw,
 };
 
 use cameraunit::{CameraInfo, CameraUnit, Error, ROI};
@@ -1717,8 +1717,12 @@ fn get_control_caps(id: i32) -> Result<Vec<ASIControlCaps>, Error> {
         } else if res == ASI_ERROR_CODE_ASI_ERROR_CAMERA_CLOSED as i32 {
             return Err(Error::CameraClosed);
         }
+        if cap.ControlType as i32 > (ASIControlType::AntiDewHeater as i32).into() {
+            break;
+        }
         let cap = ASIControlCaps {
-            id: ASIControlType::from_u32(cap.ControlType).unwrap(),
+            id: ASIControlType::from_u32(cap.ControlType)
+                .ok_or(Error::InvalidControlType(cap.ControlType.to_string()))?,
             name: cap.Name,
             description: cap.Description,
             min_value: cap.MinValue.into(),
@@ -1899,9 +1903,10 @@ fn get_camera_prop_by_idx(idx: i32) -> Result<ASI_CAMERA_INFO, Error> {
 }
 
 fn string_from_char<const N: usize>(inp: &[raw::c_char; N]) -> String {
-    let mut str =
-        String::from_utf8_lossy(&unsafe { std::mem::transmute_copy::<[raw::c_char; N], [u8; N]>(inp) })
-            .to_string();
+    let mut str = String::from_utf8_lossy(&unsafe {
+        std::mem::transmute_copy::<[raw::c_char; N], [u8; N]>(inp)
+    })
+    .to_string();
     str.retain(|c| c != '\0');
     str.trim().to_string()
 }
