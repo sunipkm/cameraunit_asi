@@ -29,7 +29,7 @@ struct ASICamconfig {
 }
 
 fn main() {
-    let cfg = ASICamconfig::from_ini("asicam.ini").unwrap();
+    let cfg = ASICamconfig::from_ini("asicam.ini").unwrap_or_default();
     let num_cameras = num_cameras();
     println!("Found {} cameras", num_cameras);
     if num_cameras <= 0 {
@@ -85,7 +85,7 @@ fn main() {
         bin_y: 1,
     })
     .unwrap();
-    cam.set_image_fmt(ASIImageFormat::Image_RAW16).unwrap();
+    cam.set_image_fmt(ASIImageFormat::ImageRAW16).unwrap();
     cam.set_exposure(Duration::from_millis(100)).unwrap();
     while !done.load(Ordering::SeqCst) {
         let img: ImageData;

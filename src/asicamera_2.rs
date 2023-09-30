@@ -1,8 +1,3 @@
-#![allow(non_upper_case_globals)]
-#![allow(non_camel_case_types)]
-#![allow(non_snake_case)]
-
-#[allow(dead_code, unused_imports)]
 mod asicamera2_bindings;
 use asicamera2_bindings::*;
 
@@ -29,7 +24,7 @@ use log::{info, warn};
 /// This object describes a ZWO ASI camera, and provides methods for control and image capture.
 ///
 /// This object implements the `CameraUnit` and `CameraInfo` trait.
-pub struct CameraUnit_ASI {
+pub struct CameraUnitASI {
     id: Arc<ASICamId>,
     capturing: Arc<Mutex<bool>>,
     props: Box<ASICameraProps>,
@@ -50,7 +45,7 @@ pub struct CameraUnit_ASI {
 /// This object describes a ZWO ASI camera and provides methods for obtaining housekeeping data.
 ///
 /// This object implements the [`cameraunit::CameraInfo`] trait, and additionally the [`std::clone::Clone`] trait.
-pub struct CameraInfo_ASI {
+pub struct CameraInfoASI {
     id: Arc<ASICamId>,
     capturing: Arc<Mutex<bool>>,
     cooler_on: Arc<AtomicBool>,
@@ -159,11 +154,11 @@ pub fn get_camera_ids() -> Option<HashMap<i32, String>> {
 /// use cameraunit_asi::open_camera;
 /// let id: i32 = 0; // some ID obtained using get_camera_ids()
 /// if let Ok((mut cam, caminfo)) = open_camera(id) {
-/// 
+///
 /// }
 /// // do things with cam
 /// ```
-pub fn open_camera(id: i32) -> Result<(CameraUnit_ASI, CameraInfo_ASI), Error> {
+pub fn open_camera(id: i32) -> Result<(CameraUnitASI, CameraInfoASI), Error> {
     if let Some(cam_ids) = get_camera_ids() {
         if !cam_ids.contains_key(&id) {
             return Err(Error::InvalidId(id));
@@ -237,7 +232,7 @@ pub fn open_camera(id: i32) -> Result<(CameraUnit_ASI, CameraInfo_ASI), Error> {
         let (gain_min, gain_max) = get_gain_minmax(&ccaps);
         let (exp_min, exp_max) = get_exposure_minmax(&ccaps);
 
-        let cobj = CameraUnit_ASI {
+        let cobj = CameraUnitASI {
             id: Arc::new(ASICamId(prop.id)),
             capturing: Arc::new(Mutex::new(false)),
             props: Box::new(prop.clone()),
@@ -251,14 +246,11 @@ pub fn open_camera(id: i32) -> Result<(CameraUnit_ASI, CameraInfo_ASI), Error> {
             is_dark_frame: false,
             image_fmt: {
                 if prop.is_color_cam {
-                    ASIImageFormat::Image_RGB24
-                } else if prop
-                    .supported_formats
-                    .contains(&ASIImageFormat::Image_RAW16)
-                {
-                    ASIImageFormat::Image_RAW16
+                    ASIImageFormat::ImageRGB24
+                } else if prop.supported_formats.contains(&ASIImageFormat::ImageRAW16) {
+                    ASIImageFormat::ImageRAW16
                 } else {
-                    ASIImageFormat::Image_RAW8
+                    ASIImageFormat::ImageRAW8
                 }
             },
             roi: ROI {
@@ -280,7 +272,7 @@ pub fn open_camera(id: i32) -> Result<(CameraUnit_ASI, CameraInfo_ASI), Error> {
             fmt: cobj.image_fmt,
         })?;
 
-        let cinfo = CameraInfo_ASI {
+        let cinfo = CameraInfoASI {
             id: cobj.id.clone(),
             capturing: cobj.capturing.clone(),
             cooler_on: cobj.cooler_on.clone(),
@@ -321,10 +313,10 @@ pub fn open_camera(id: i32) -> Result<(CameraUnit_ASI, CameraInfo_ASI), Error> {
 /// use cameraunit_asi::open_first_camera;
 ///
 /// if let Ok((mut cam, caminfo)) = open_first_camera() {
-/// 
+///
 /// }
 /// ```
-pub fn open_first_camera() -> Result<(CameraUnit_ASI, CameraInfo_ASI), Error> {
+pub fn open_first_camera() -> Result<(CameraUnitASI, CameraInfoASI), Error> {
     let ids = get_camera_ids();
     if let Some(ids) = ids {
         let val = ids.iter().next().unwrap();
@@ -335,7 +327,7 @@ pub fn open_first_camera() -> Result<(CameraUnit_ASI, CameraInfo_ASI), Error> {
 }
 
 #[deny(missing_docs)]
-impl CameraUnit_ASI {
+impl CameraUnitASI {
     /// Set an unique identifier for the camera.
     ///
     /// This method is only available for USB3 cameras.
@@ -451,7 +443,7 @@ impl CameraUnit_ASI {
             width: 0,
             height: 0,
             bin: 0,
-            fmt: ASIImageFormat::Image_RAW8,
+            fmt: ASIImageFormat::ImageRAW8,
         };
         let mut fmt: i32 = 0;
         let res = unsafe {
@@ -534,7 +526,7 @@ impl CameraUnit_ASI {
 }
 
 #[deny(missing_docs)]
-impl CameraInfo for CameraInfo_ASI {
+impl CameraInfo for CameraInfoASI {
     /// Cancel an exposure in progress.
     /// This function may panic if the internal mutex is poisoned.
     ///
@@ -638,7 +630,7 @@ impl CameraInfo for CameraInfo_ASI {
     }
 }
 
-impl CameraInfo for CameraUnit_ASI {
+impl CameraInfo for CameraUnitASI {
     /// Cancel an exposure in progress.
     /// This function may panic if the internal mutex is poisoned.
     ///
@@ -742,7 +734,7 @@ impl CameraInfo for CameraUnit_ASI {
     }
 }
 
-impl CameraUnit for CameraUnit_ASI {
+impl CameraUnit for CameraUnitASI {
     /// Get the camera vendor. In this case, returns `ZWO`.
     fn get_vendor(&self) -> &str {
         "ZWO"
@@ -863,7 +855,7 @@ impl CameraUnit for CameraUnit_ASI {
             return Err(Error::ExposureFailed("Exposure timed out".to_owned()));
         } else {
             let img = match roi.fmt {
-                ASIImageFormat::Image_RAW8 => {
+                ASIImageFormat::ImageRAW8 => {
                     let mut data = vec![0u8; (roi.width * roi.height) as usize];
                     let res = unsafe {
                         ASIGetDataAfterExp(
@@ -885,7 +877,7 @@ impl CameraUnit for CameraUnit_ASI {
                     img.copy_from_slice(&data);
                     DynamicImage::from(img)
                 }
-                ASIImageFormat::Image_RAW16 => {
+                ASIImageFormat::ImageRAW16 => {
                     let mut data = vec![0u16; (roi.width * roi.height) as usize];
                     let res = unsafe {
                         ASIGetDataAfterExp(
@@ -907,7 +899,7 @@ impl CameraUnit for CameraUnit_ASI {
                     img.copy_from_slice(&data);
                     DynamicImage::from(img)
                 }
-                ASIImageFormat::Image_RGB24 => {
+                ASIImageFormat::ImageRGB24 => {
                     let mut data = vec![0u8; (roi.width * roi.height * 3) as usize];
                     let res = unsafe {
                         ASIGetDataAfterExp(
@@ -1065,7 +1057,7 @@ impl CameraUnit for CameraUnit_ASI {
             ASIExposureStatus::Success => {
                 let roi = self.get_roi_format()?;
                 let img = match roi.fmt {
-                    ASIImageFormat::Image_RAW8 => {
+                    ASIImageFormat::ImageRAW8 => {
                         let mut data = vec![0u8; (roi.width * roi.height) as usize];
                         let res = unsafe {
                             ASIGetDataAfterExp(
@@ -1087,7 +1079,7 @@ impl CameraUnit for CameraUnit_ASI {
                         img.copy_from_slice(&data);
                         DynamicImage::from(img)
                     }
-                    ASIImageFormat::Image_RAW16 => {
+                    ASIImageFormat::ImageRAW16 => {
                         let mut data = vec![0u16; (roi.width * roi.height) as usize];
                         let res = unsafe {
                             ASIGetDataAfterExp(
@@ -1109,7 +1101,7 @@ impl CameraUnit for CameraUnit_ASI {
                         img.copy_from_slice(&data);
                         DynamicImage::from(img)
                     }
-                    ASIImageFormat::Image_RGB24 => {
+                    ASIImageFormat::ImageRGB24 => {
                         let mut data = vec![0u8; (roi.width * roi.height * 3) as usize];
                         let res = unsafe {
                             ASIGetDataAfterExp(
@@ -1542,8 +1534,8 @@ impl ASIControlType {
             ASI_CONTROL_TYPE_ASI_GAIN => Some(ASIControlType::Gain),
             ASI_CONTROL_TYPE_ASI_EXPOSURE => Some(ASIControlType::Exposure),
             ASI_CONTROL_TYPE_ASI_GAMMA => Some(ASIControlType::Gamma),
-            ASI_CONTROL_TYPE_ASI_WB_R => Some(ASIControlType::WhiteBal_R),
-            ASI_CONTROL_TYPE_ASI_WB_B => Some(ASIControlType::WhiteBal_B),
+            ASI_CONTROL_TYPE_ASI_WB_R => Some(ASIControlType::WhiteBalR),
+            ASI_CONTROL_TYPE_ASI_WB_B => Some(ASIControlType::WhiteBalB),
             ASI_CONTROL_TYPE_ASI_OFFSET => Some(ASIControlType::Offset),
             ASI_CONTROL_TYPE_ASI_BANDWIDTHOVERLOAD => Some(ASIControlType::BWOvld),
             ASI_CONTROL_TYPE_ASI_OVERCLOCK => Some(ASIControlType::Overclock),
@@ -1571,10 +1563,10 @@ impl ASIControlType {
 impl ASIBayerPattern {
     fn from_u32(val: u32) -> Option<Self> {
         match val {
-            ASI_BAYER_PATTERN_ASI_BAYER_RG => Some(ASIBayerPattern::Bayer_RG),
-            ASI_BAYER_PATTERN_ASI_BAYER_BG => Some(ASIBayerPattern::Bayer_BG),
-            ASI_BAYER_PATTERN_ASI_BAYER_GR => Some(ASIBayerPattern::Bayer_GR),
-            ASI_BAYER_PATTERN_ASI_BAYER_GB => Some(ASIBayerPattern::Bayer_GB),
+            ASI_BAYER_PATTERN_ASI_BAYER_RG => Some(ASIBayerPattern::BayerRG),
+            ASI_BAYER_PATTERN_ASI_BAYER_BG => Some(ASIBayerPattern::BayerBG),
+            ASI_BAYER_PATTERN_ASI_BAYER_GR => Some(ASIBayerPattern::BayerGR),
+            ASI_BAYER_PATTERN_ASI_BAYER_GB => Some(ASIBayerPattern::BayerGB),
             _ => None,
         }
     }
@@ -1583,9 +1575,9 @@ impl ASIBayerPattern {
 impl ASIImageFormat {
     fn from_u32(val: u32) -> Option<Self> {
         match val as i32 {
-            ASI_IMG_TYPE_ASI_IMG_RAW8 => Some(ASIImageFormat::Image_RAW8),
-            ASI_IMG_TYPE_ASI_IMG_RGB24 => Some(ASIImageFormat::Image_RGB24),
-            ASI_IMG_TYPE_ASI_IMG_RAW16 => Some(ASIImageFormat::Image_RAW16),
+            ASI_IMG_TYPE_ASI_IMG_RAW8 => Some(ASIImageFormat::ImageRAW8),
+            ASI_IMG_TYPE_ASI_IMG_RGB24 => Some(ASIImageFormat::ImageRGB24),
+            ASI_IMG_TYPE_ASI_IMG_RAW16 => Some(ASIImageFormat::ImageRAW16),
             _ => None,
         }
     }
@@ -1594,10 +1586,10 @@ impl ASIImageFormat {
 #[repr(u32)]
 #[derive(Debug, PartialEq, Clone, Copy)]
 enum ASIBayerPattern {
-    Bayer_RG = ASI_BAYER_PATTERN_ASI_BAYER_RG,
-    Bayer_BG = ASI_BAYER_PATTERN_ASI_BAYER_BG,
-    Bayer_GR = ASI_BAYER_PATTERN_ASI_BAYER_GR,
-    Bayer_GB = ASI_BAYER_PATTERN_ASI_BAYER_GB,
+    BayerRG = ASI_BAYER_PATTERN_ASI_BAYER_RG,
+    BayerBG = ASI_BAYER_PATTERN_ASI_BAYER_BG,
+    BayerGR = ASI_BAYER_PATTERN_ASI_BAYER_GR,
+    BayerGB = ASI_BAYER_PATTERN_ASI_BAYER_GB,
 }
 
 #[repr(i32)]
@@ -1606,11 +1598,11 @@ enum ASIBayerPattern {
 /// Available image pixel formats for the ZWO ASI cameras.
 pub enum ASIImageFormat {
     /// 8-bit raw image.
-    Image_RAW8 = ASI_IMG_TYPE_ASI_IMG_RAW8,
+    ImageRAW8 = ASI_IMG_TYPE_ASI_IMG_RAW8,
     /// 24-bit RGB image.
-    Image_RGB24 = ASI_IMG_TYPE_ASI_IMG_RGB24,
+    ImageRGB24 = ASI_IMG_TYPE_ASI_IMG_RGB24,
     /// 16-bit raw image.
-    Image_RAW16 = ASI_IMG_TYPE_ASI_IMG_RAW16,
+    ImageRAW16 = ASI_IMG_TYPE_ASI_IMG_RAW16,
 }
 
 #[repr(i32)]
@@ -1619,8 +1611,8 @@ enum ASIControlType {
     Gain = ASI_CONTROL_TYPE_ASI_GAIN as i32,
     Exposure = ASI_CONTROL_TYPE_ASI_EXPOSURE as i32,
     Gamma = ASI_CONTROL_TYPE_ASI_GAMMA as i32,
-    WhiteBal_R = ASI_CONTROL_TYPE_ASI_WB_R as i32,
-    WhiteBal_B = ASI_CONTROL_TYPE_ASI_WB_B as i32,
+    WhiteBalR = ASI_CONTROL_TYPE_ASI_WB_R as i32,
+    WhiteBalB = ASI_CONTROL_TYPE_ASI_WB_B as i32,
     Offset = ASI_CONTROL_TYPE_ASI_OFFSET as i32,
     BWOvld = ASI_CONTROL_TYPE_ASI_BANDWIDTHOVERLOAD as i32,
     Overclock = ASI_CONTROL_TYPE_ASI_OVERCLOCK as i32,

@@ -1,7 +1,7 @@
 extern crate bindgen;
 extern crate cc;
 
-use std::{path::PathBuf, env};
+use std::{env, path::PathBuf};
 
 use bindgen::CargoCallbacks;
 
@@ -15,8 +15,7 @@ fn main() {
     // This is the path to the `c` headers file.
     let headers_path = libdir_path.join("wrapper.h");
 
-    let headers_path_str = headers_path.to_str()
-        .expect("Path is not a valid string");
+    let headers_path_str = headers_path.to_str().expect("Path is not a valid string");
 
     // Tell cargo to look for shared libraries in the specified directory
     println!("cargo:rustc-link-search={}", libdir_path.to_str().unwrap());
@@ -47,8 +46,7 @@ fn main() {
     // Write the bindings to the $OUT_DIR/bindings.rs file.
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
 
-    let out_path = out_path
-        .join("asicamera2_bindings.rs");
+    let out_path = out_path.join("bindings.rs");
 
     bindings
         .write_to_file(out_path)

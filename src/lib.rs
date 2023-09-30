@@ -3,7 +3,7 @@ mod asicamera_2;
 
 pub use asicamera_2::{
     get_camera_ids, num_cameras, open_camera, open_first_camera, ASICameraProps, ASIImageFormat,
-    CameraInfo_ASI, CameraUnit_ASI,
+    CameraInfoASI, CameraUnitASI,
 };
 
 #[cfg(test)]
