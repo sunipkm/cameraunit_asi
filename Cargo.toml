@@ -1,6 +1,6 @@
 [package]
 name = "cameraunit_asi"
-version = "2.1.1"
+version = "2.1.2"
 edition = "2021"
 rust-version = "1.68.0"
 authors = ["Sunip K. Mukherjee"]
@@ -24,7 +24,7 @@ bench = false
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cameraunit = "1.0.3"
+cameraunit = "1.1.0"
 chrono = "0.4.31"
 configparser = "3.0.2"
 ctrlc = "3.4.1"
