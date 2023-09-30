@@ -12,6 +12,7 @@ use std::{
     fmt::Display,
     io::{self, Write},
     mem::MaybeUninit,
+    str,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc, Mutex,
@@ -316,7 +317,7 @@ pub fn open_camera(id: i32) -> Result<(CameraUnit_ASI, CameraInfo_ASI), Error> {
 ///
 /// ```
 /// use cameraunit_asi::open_first_camera;
-/// 
+///
 /// let (mut cam, caminfo) = open_first_camera().expect("No cameras found");
 /// ```
 pub fn open_first_camera() -> Result<(CameraUnit_ASI, CameraInfo_ASI), Error> {
@@ -346,6 +347,11 @@ impl CameraUnit_ASI {
         if !self.props.is_usb3_camera {
             return Err(Error::InvalidMode(
                 "Camera does not support UUID".to_owned(),
+            ));
+        }
+        if str::from_utf8(uuid).is_err() {
+            return Err(Error::InvalidValue(
+                "UUID must be a valid UTF-8 string".to_owned(),
             ));
         }
         if self.props.uuid == *uuid {
@@ -546,8 +552,8 @@ impl CameraInfo for CameraInfo_ASI {
         &self.name
     }
 
-    fn get_uuid(&self) -> Option<String> {
-        Some(String::from_utf8_lossy(&self.uuid).to_string())
+    fn get_uuid(&self) -> Option<&str> {
+        str::from_utf8(&self.uuid).ok()
     }
 
     fn get_ccd_height(&self) -> u32 {
@@ -650,8 +656,8 @@ impl CameraInfo for CameraUnit_ASI {
         &self.props.name
     }
 
-    fn get_uuid(&self) -> Option<String> {
-        Some(String::from_utf8_lossy(&self.props.uuid).to_string())
+    fn get_uuid(&self) -> Option<&str> {
+        str::from_utf8(&self.props.uuid).ok()
     }
 
     fn get_ccd_height(&self) -> u32 {
@@ -999,7 +1005,7 @@ impl CameraUnit for CameraUnit_ASI {
     }
 
     /// Check if an image is ready after [`CameraUnit_ASI::start_exposure()`].
-    /// 
+    ///
     /// # Returns
     ///  - `false` if exposure is in progress.
     ///  - `true` if exposure is ready for download.

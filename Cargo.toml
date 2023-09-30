@@ -1,6 +1,6 @@
 [package]
 name = "cameraunit_asi"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 rust-version = "1.68.0"
 authors = ["Sunip K. Mukherjee"]
@@ -17,7 +17,7 @@ exclude = [".github"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cameraunit = "1.0.1"
+cameraunit = "1.0.3"
 image = "0.24.7"
 log = "0.4.20"
 
