@@ -26,7 +26,7 @@ You can use `cameraunit_asi` to:
 Add this to your `Cargo.toml`:
 ```toml
 [dependencies]
-cameraunit_asi = "2.3.0"
+cameraunit_asi = "2.4.1"
 ```
 and this to your source code:
 ```rs

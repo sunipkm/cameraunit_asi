@@ -7,7 +7,7 @@ pub use asicamera_2::{
 };
 
 /// Re-export of [`cameraunit`] crate.
-pub use cameraunit::{CameraInfo, CameraUnit, ImageData, SerialImageData, SerialImagePixel, SerialImageStorageTypes, Error, ROI};
+pub use cameraunit::{CameraInfo, CameraUnit, ImageData, DynamicSerialImage, Error, ROI};
 
 #[cfg(test)]
 mod tests {
