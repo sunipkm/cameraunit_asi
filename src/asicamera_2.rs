@@ -1444,6 +1444,52 @@ impl CameraUnit for CameraUnitASI {
         self.is_dark_frame = !open;
         Ok(open)
     }
+
+    /// Flip the image along X and/or Y axes.
+    ///
+    /// # Arguments
+    ///  * `x` - Whether to flip along the X axis.
+    ///  * `y` - Whether to flip along the Y axis.
+    ///
+    /// # Errors
+    ///  - `ExposureInProgress` - An exposure is already in progress.
+    ///  - `InvalidId` - Invalid camera ID.
+    ///  - `CameraClosed` - Camera is closed.
+    ///  - `InvalidControlType` - Camera does not support flipping.
+    ///  - `Message` - Camera does not support flipping.
+    ///
+    fn set_flip(&mut self, x: bool, y: bool) -> Result<(), Error> {
+        let capturing = self.capturing.lock().unwrap();
+        if *capturing {
+            return Err(Error::ExposureInProgress);
+        }
+        let flipmode = {
+            if x && y {
+                ASI_FLIP_STATUS_ASI_FLIP_BOTH
+            } else if x {
+                ASI_FLIP_STATUS_ASI_FLIP_HORIZ
+            } else if y {
+                ASI_FLIP_STATUS_ASI_FLIP_VERT
+            } else {
+                ASI_FLIP_STATUS_ASI_FLIP_NONE
+            }
+        };
+        set_control_value(self.id.0, ASIControlType::Flip, flipmode.into(), false)
+    }
+
+    /// Check if the image is flipped along X and/or Y axes.
+    /// 
+    /// # Returns
+    ///  * `(x, y)` - Whether the image is flipped along the X and/or Y axes. Both `false` may indicate error getting the flip status.
+    fn get_flip(&self) -> (bool, bool) {
+        let (flipmode, _is_auto) = get_control_value(self.id.0, ASIControlType::Flip)
+            .unwrap_or((ASI_FLIP_STATUS_ASI_FLIP_NONE as i64, false));
+        let x = flipmode == ASI_FLIP_STATUS_ASI_FLIP_HORIZ as i64
+            || flipmode == ASI_FLIP_STATUS_ASI_FLIP_BOTH as i64;
+        let y = flipmode == ASI_FLIP_STATUS_ASI_FLIP_VERT as i64
+            || flipmode == ASI_FLIP_STATUS_ASI_FLIP_BOTH as i64;
+        (x, y)
+    }
 }
 
 impl Default for ASIControlCaps {
@@ -1794,6 +1840,7 @@ fn get_control_value(id: i32, ctyp: ASIControlType) -> Result<(c_long, bool), Er
     Ok((val, auto_val == ASI_BOOL_ASI_TRUE as i32))
 }
 
+/// Errors: InvalidId, InvalidControlType, CameraClosed, Message(Could not set value for type)
 fn set_control_value(id: i32, ctyp: ASIControlType, val: c_long, auto: bool) -> Result<(), Error> {
     let res = unsafe {
         ASISetControlValue(
