@@ -1,3 +1,4 @@
+#![warn(missing_docs)]
 mod asicamera2_bindings;
 use asicamera2_bindings::*;
 
@@ -534,8 +535,8 @@ impl CameraInfo for CameraInfoASI {
     /// This function may panic if the internal mutex is poisoned.
     ///
     /// # Errors
-    ///  - `InvalidId` - Invalid camera ID
-    ///  - `CameraClosed` - Camera is closed
+    ///  - [`cameraunit::Error::InvalidId`] - Invalid camera ID
+    ///  - [`cameraunit::Error::CameraClosed`] - Camera is closed
     fn cancel_capture(&self) -> Result<(), Error> {
         let mut capturing = self.capturing.lock().unwrap();
         if !*capturing {
@@ -596,9 +597,9 @@ impl CameraInfo for CameraInfoASI {
     ///  * `on` - `true` to turn the cooler on, `false` for off.
     ///
     /// # Errors
-    ///  - `InvalidControlType` - Camera does not have a cooler
-    ///  - `InvalidValue` - Invalid control value
-    ///  - `InvalidId` - Invalid camera ID
+    ///  - [`cameraunit::Error::InvalidControlType`] - Camera does not have a cooler
+    ///  - [`cameraunit::Error::InvalidValue`] - Invalid control value
+    ///  - [`cameraunit::Error::InvalidId`] - Invalid camera ID
     fn set_cooler(&self, on: bool) -> Result<(), Error> {
         set_control_value(
             self.id.0,
@@ -623,9 +624,9 @@ impl CameraInfo for CameraInfoASI {
     ///  * `temperature` - Target temperature in degrees Celsius, must be between -80 C and 20 C.
     ///
     /// # Errors
-    ///  - `InvalidControlType` - Camera does not have a cooler
-    ///  - `InvalidValue` - Temperature is outside of range
-    ///  - `InvalidId` - Invalid camera ID
+    ///  - [`cameraunit::Error::InvalidControlType`] - Camera does not have a cooler
+    ///  - [`cameraunit::Error::InvalidValue`] - Temperature is outside of range
+    ///  - [`cameraunit::Error::InvalidId`] - Invalid camera ID
     fn set_temperature(&self, temperature: f32) -> Result<f32, Error> {
         let temp = set_temperature(self.id.0, temperature, self.is_cooler_cam)?;
         self.cooler_on.store(true, Ordering::SeqCst);
@@ -638,8 +639,8 @@ impl CameraInfo for CameraUnitASI {
     /// This function may panic if the internal mutex is poisoned.
     ///
     /// # Errors
-    ///  - `InvalidId` - Invalid camera ID
-    ///  - `CameraClosed` - Camera is closed
+    ///  - [`cameraunit::Error::InvalidId`] - Invalid camera ID
+    ///  - [`cameraunit::Error::CameraClosed`] - Camera is closed
     fn cancel_capture(&self) -> Result<(), Error> {
         let mut capturing = self.capturing.lock().unwrap();
         if *capturing {
@@ -692,9 +693,9 @@ impl CameraInfo for CameraUnitASI {
     ///  * `on` - `true` to turn the cooler on, `false` for off.
     ///
     /// # Errors
-    ///  - `InvalidControlType` - Camera does not have a cooler
-    ///  - `InvalidValue` - Invalid control value
-    ///  - `InvalidId` - Invalid camera ID
+    ///  - [`cameraunit::Error::InvalidControlType`] - Camera does not have a cooler
+    ///  - [`cameraunit::Error::InvalidValue`] - Invalid control value
+    ///  - [`cameraunit::Error::InvalidId`] - Invalid camera ID
     fn set_cooler(&self, on: bool) -> Result<(), Error> {
         set_control_value(
             self.id.0,
@@ -727,9 +728,9 @@ impl CameraInfo for CameraUnitASI {
     ///  * `temperature` - Target temperature in degrees Celsius, must be between -80 C and 20 C.
     ///
     /// # Errors
-    ///  - `InvalidControlType` - Camera does not have a cooler
-    ///  - `InvalidValue` - Temperature is outside of range
-    ///  - `InvalidId` - Invalid camera ID
+    ///  - [`cameraunit::Error::InvalidControlType`] - Camera does not have a cooler
+    ///  - [`cameraunit::Error::InvalidValue`] - Temperature is outside of range
+    ///  - [`cameraunit::Error::InvalidId`] - Invalid camera ID
     fn set_temperature(&self, temperature: f32) -> Result<f32, Error> {
         let temp = set_temperature(self.id.0, temperature, self.props.is_cooler_cam)?;
         self.cooler_on.store(true, Ordering::SeqCst);
@@ -770,12 +771,12 @@ impl CameraUnit for CameraUnitASI {
     /// Capture an image.
     ///
     /// # Errors
-    ///  - `InvalidId` - Invalid camera ID.
-    ///  - `CameraClosed` - Camera is closed.
-    ///  - `ExposureInProgress` - An exposure is already in progress.
-    ///  - `ExposureFailed` - Exposure failed.
-    ///  - `TimedOut` - Exposure timed out.
-    ///  - `GeneralError` - The camera is in video capture mode.
+    ///  - [`cameraunit::Error::InvalidId`] - Invalid camera ID.
+    ///  - [`cameraunit::Error::CameraClosed`] - Camera is closed.
+    ///  - [`cameraunit::Error::ExposureInProgress`] - An exposure is already in progress.
+    ///  - [`cameraunit::Error::ExposureFailed`] - Exposure failed.
+    ///  - [`cameraunit::Error::TimedOut`] - Exposure timed out.
+    ///  - [`cameraunit::Error::GeneralError`] - The camera is in video capture mode.
     fn capture_image(&self) -> Result<ImageData, Error> {
         let start_time: SystemTime;
         let roi: ASIRoiMode;
@@ -1174,8 +1175,8 @@ impl CameraUnit for CameraUnitASI {
     /// Get the camera gain in percentage.
     ///
     /// # Errors
-    ///  - `InvalidId` - Invalid camera ID.
-    ///  - `CameraClosed` - Camera is closed.
+    ///  - [`cameraunit::Error::InvalidId`] - Invalid camera ID.
+    ///  - [`cameraunit::Error::CameraClosed`] - Camera is closed.
     fn get_gain(&self) -> f32 {
         let res = get_control_value(self.id.0, ASIControlType::Gain);
         if let Ok((val, _)) = res {
@@ -1192,8 +1193,8 @@ impl CameraUnit for CameraUnitASI {
     /// Get the raw camera gain.
     ///
     /// # Errors
-    ///  - `InvalidId` - Invalid camera ID.
-    ///  - `CameraClosed` - Camera is closed.
+    ///  - [`cameraunit::Error::InvalidId`] - Invalid camera ID.
+    ///  - [`cameraunit::Error::CameraClosed`] - Camera is closed.
     fn get_gain_raw(&self) -> i64 {
         let res = get_control_value(self.id.0, ASIControlType::Gain);
         if let Ok((val, _)) = res {
@@ -1205,8 +1206,8 @@ impl CameraUnit for CameraUnitASI {
     /// Get the pixel offset.
     ///
     /// # Errors
-    ///  - `InvalidId` - Invalid camera ID.
-    ///  - `CameraClosed` - Camera is closed.
+    ///  - [`cameraunit::Error::InvalidId`] - Invalid camera ID.
+    ///  - [`cameraunit::Error::CameraClosed`] - Camera is closed.
     fn get_offset(&self) -> i32 {
         let res = get_control_value(self.id.0, ASIControlType::Offset);
         if let Ok((val, _)) = res {
@@ -1229,10 +1230,10 @@ impl CameraUnit for CameraUnitASI {
     ///  * `exposure` - Exposure time.
     ///
     /// # Errors
-    ///  - `InvalidValue` - Exposure time is outside of valid range.
-    ///  - `ExposureInProgress` - An exposure is already in progress.
-    ///  - `InvalidId` - Invalid camera ID.
-    ///  - `CameraClosed` - Camera is closed.
+    ///  - [`cameraunit::Error::InvalidValue`] - Exposure time is outside of valid range.
+    ///  - [`cameraunit::Error::ExposureInProgress`] - An exposure is already in progress.
+    ///  - [`cameraunit::Error::InvalidId`] - Invalid camera ID.
+    ///  - [`cameraunit::Error::CameraClosed`] - Camera is closed.
     fn set_exposure(&mut self, exposure: Duration) -> Result<Duration, Error> {
         if exposure < self.exp_min {
             return Err(Error::InvalidValue(format!(
@@ -1268,10 +1269,10 @@ impl CameraUnit for CameraUnitASI {
     ///  * `gain` - Gain in percentage, must be between 0 and 100.
     ///
     /// # Errors
-    ///  - `InvalidValue` - Gain is outside of valid range.
-    ///  - `ExposureInProgress` - An exposure is already in progress.
-    ///  - `InvalidId` - Invalid camera ID.
-    ///  - `CameraClosed` - Camera is closed.
+    ///  - [`cameraunit::Error::InvalidValue`] - Gain is outside of valid range.
+    ///  - [`cameraunit::Error::ExposureInProgress`] - An exposure is already in progress.
+    ///  - [`cameraunit::Error::InvalidId`] - Invalid camera ID.
+    ///  - [`cameraunit::Error::CameraClosed`] - Camera is closed.
     fn set_gain(&mut self, gain: f32) -> Result<f32, Error> {
         if gain < 0.0 || gain > 100.0 {
             return Err(Error::InvalidValue(format!(
@@ -1292,10 +1293,10 @@ impl CameraUnit for CameraUnitASI {
     ///  * `gain` - Camera gain.
     ///
     /// # Errors
-    ///  - `InvalidValue` - Gain is outside of valid range.
-    ///  - `ExposureInProgress` - An exposure is already in progress.
-    ///  - `InvalidId` - Invalid camera ID.
-    ///  - `CameraClosed` - Camera is closed.
+    ///  - [`cameraunit::Error::InvalidValue`] - Gain is outside of valid range.
+    ///  - [`cameraunit::Error::ExposureInProgress`] - An exposure is already in progress.
+    ///  - [`cameraunit::Error::InvalidId`] - Invalid camera ID.
+    ///  - [`cameraunit::Error::CameraClosed`] - Camera is closed.
     fn set_gain_raw(&mut self, gain: i64) -> Result<i64, Error> {
         if gain < self.gain_min {
             return Err(Error::InvalidValue(format!(
@@ -1322,11 +1323,11 @@ impl CameraUnit for CameraUnitASI {
     ///  * `roi` - Region of interest, of type `cameraunit::ROI`.
     ///
     /// # Errors
-    ///  - `InvalidValue` - ROI is invalid.
-    ///  - `OutOfBounds` - ROI is outside of the CCD.
-    ///  - `ExposureInProgress` - An exposure is already in progress.
-    ///  - `InvalidId` - Invalid camera ID.
-    ///  - `CameraClosed` - Camera is closed.
+    ///  - [`cameraunit::Error::InvalidValue`] - ROI is invalid.
+    ///  - [`cameraunit::Error::OutOfBounds`] - ROI is outside of the CCD.
+    ///  - [`cameraunit::Error::ExposureInProgress`] - An exposure is already in progress.
+    ///  - [`cameraunit::Error::InvalidId`] - Invalid camera ID.
+    ///  - [`cameraunit::Error::CameraClosed`] - Camera is closed.
     fn set_roi(&mut self, roi: &ROI) -> Result<&ROI, Error> {
         if roi.bin_x != roi.bin_y {
             return Err(Error::InvalidValue(
@@ -1431,8 +1432,8 @@ impl CameraUnit for CameraUnitASI {
     ///  * `open` - Whether to open the shutter.
     ///
     /// # Errors
-    ///  - `InvalidControlType` - Camera does not have a mechanical shutter.
-    ///  - `ExposureInProgress` - An exposure is already in progress.
+    ///  - [`cameraunit::Error::InvalidControlType`] - Camera does not have a mechanical shutter.
+    ///  - [`cameraunit::Error::ExposureInProgress`] - An exposure is already in progress.
     fn set_shutter_open(&mut self, open: bool) -> Result<bool, Error> {
         let capturing = self.capturing.lock().unwrap();
         if *capturing {
@@ -1454,11 +1455,11 @@ impl CameraUnit for CameraUnitASI {
     ///  * `y` - Whether to flip along the Y axis.
     ///
     /// # Errors
-    ///  - `ExposureInProgress` - An exposure is already in progress.
-    ///  - `InvalidId` - Invalid camera ID.
-    ///  - `CameraClosed` - Camera is closed.
-    ///  - `InvalidControlType` - Camera does not support flipping.
-    ///  - `Message` - Camera does not support flipping.
+    ///  - [`cameraunit::Error::ExposureInProgress`] - An exposure is already in progress.
+    ///  - [`cameraunit::Error::InvalidId`] - Invalid camera ID.
+    ///  - [`cameraunit::Error::CameraClosed`] - Camera is closed.
+    ///  - [`cameraunit::Error::InvalidControlType`] - Camera does not support flipping.
+    ///  - [`cameraunit::Error::Message`] - Camera does not support flipping.
     ///
     fn set_flip(&mut self, x: bool, y: bool) -> Result<(), Error> {
         let capturing = self.capturing.lock().unwrap();
@@ -1817,8 +1818,8 @@ fn get_controlcap_minmax(caps: &Vec<ASIControlCaps>, id: ASIControlType) -> Opti
 /// ZWO ASI camera internal implementation to cancel ongoing capture.
 ///
 /// # Errors
-///  - `InvalidId` - Invalid camera ID
-///  - `CameraClosed` - Camera is closed
+///  - [`cameraunit::Error::InvalidId`] - Invalid camera ID
+///  - [`cameraunit::Error::CameraClosed`] - Camera is closed
 fn sys_cancel_capture(id: i32) -> Result<(), Error> {
     let res = unsafe { ASIStopExposure(id) };
     if res == ASI_ERROR_CODE_ASI_ERROR_INVALID_ID as i32 {
@@ -1879,9 +1880,9 @@ fn set_control_value(id: i32, ctyp: ASIControlType, val: c_long, auto: bool) -> 
 ///  * `is_cooler_cam` - Whether the camera has a cooler.
 ///
 /// # Errors
-///  - `InvalidControlType` - Camera does not have a cooler
-///  - `InvalidValue` - Temperature is outside of range
-///  - `InvalidId` - Invalid camera ID
+///  - [`cameraunit::Error::InvalidControlType`] - Camera does not have a cooler
+///  - [`cameraunit::Error::InvalidValue`] - Temperature is outside of range
+///  - [`cameraunit::Error::InvalidId`] - Invalid camera ID
 fn set_temperature(id: i32, temperature: f32, is_cooler_cam: bool) -> Result<f32, Error> {
     if !is_cooler_cam {
         return Err(Error::InvalidControlType(
