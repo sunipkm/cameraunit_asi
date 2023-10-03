@@ -1483,12 +1483,12 @@ impl CameraUnit for CameraUnitASI {
     ///  * `(x, y)` - Whether the image is flipped along the X and/or Y axes. Both `false` may indicate error getting the flip status.
     fn get_flip(&self) -> (bool, bool) {
         let (flipmode, _is_auto) = get_control_value(self.id.0, ASIControlType::Flip)
-            .unwrap_or((ASI_FLIP_STATUS_ASI_FLIP_NONE as i64, false));
-        let flipmode = i64::from(flipmode);
-        let x = flipmode == ASI_FLIP_STATUS_ASI_FLIP_HORIZ as i64
-            || flipmode == ASI_FLIP_STATUS_ASI_FLIP_BOTH as i64;
-        let y = flipmode == ASI_FLIP_STATUS_ASI_FLIP_VERT as i64
-            || flipmode == ASI_FLIP_STATUS_ASI_FLIP_BOTH as i64;
+            .unwrap_or((ASI_FLIP_STATUS_ASI_FLIP_NONE as c_long, false));
+        let flipmode = c_long::from(flipmode);
+        let x = flipmode == ASI_FLIP_STATUS_ASI_FLIP_HORIZ as c_long
+            || flipmode == ASI_FLIP_STATUS_ASI_FLIP_BOTH as c_long;
+        let y = flipmode == ASI_FLIP_STATUS_ASI_FLIP_VERT as c_long
+            || flipmode == ASI_FLIP_STATUS_ASI_FLIP_BOTH as c_long;
         (x, y)
     }
 }
