@@ -10,8 +10,7 @@ use std::{
     time::{Duration, SystemTime},
 };
 
-use cameraunit::{CameraInfo, CameraUnit, Error, ImageData, ROI};
-use cameraunit_asi::{num_cameras, open_first_camera, ASIImageFormat};
+use cameraunit_asi::{num_cameras, open_first_camera, ASIImageFormat, CameraInfo, CameraUnit, Error, ImageData, ROI};
 use chrono::{DateTime, Local};
 use configparser::ini::Ini;
 

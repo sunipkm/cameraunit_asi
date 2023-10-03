@@ -6,6 +6,9 @@ pub use asicamera_2::{
     CameraInfoASI, CameraUnitASI,
 };
 
+/// Re-export of [`cameraunit`] crate.
+pub use cameraunit::{CameraInfo, CameraUnit, ImageData, SerialImageData, SerialImagePixel, SerialImageStorageTypes, Error, ROI};
+
 #[cfg(test)]
 mod tests {
     use std::{path::Path, thread::sleep, time::Duration};

@@ -407,7 +407,9 @@ impl CameraUnitASI {
     /// # Errors
     ///  - [`cameraunit::Error::InvalidMode`] - The camera does not support the specified image format.
     ///  - [`cameraunit::Error::ExposureInProgress`] - An exposure is in progress.
-    ///  - Additionally, errors from [`Self::get_roi_format()`] and [`Self::set_roi_format()`] may be returned.
+    ///  - [`cameraunit::Error::InvalidId`] - The camera ID is invalid.
+    ///  - [`cameraunit::Error::CameraClosed`] - The camera is closed.
+    ///  - [`cameraunit::Error::InvalidMode`] - The camera does not support the specified image format.
     pub fn set_image_fmt(&mut self, fmt: ASIImageFormat) -> Result<(), Error> {
         if self.image_fmt == fmt {
             return Ok(());
