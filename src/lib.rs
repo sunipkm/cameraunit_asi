@@ -7,7 +7,7 @@ pub use asicamera_2::{
 };
 
 /// Re-export of [`cameraunit`] crate.
-pub use cameraunit::{CameraInfo, CameraUnit, ImageData, DynamicSerialImage, Error, ROI};
+pub use cameraunit::{CameraInfo, CameraUnit, Error, ROI, DynamicSerialImage, SerialImageBuffer, OptimumExposureConfig, ImageMetaData};
 
 #[cfg(test)]
 mod tests {
@@ -43,7 +43,7 @@ mod tests {
             .download_image()
             .map_err(|x| println!("Downloading image: {}", x.to_string()))
             .unwrap();
-        img.save_fits(Path::new("./"), "test", "asicam_test", true, true)
+        img.savefits(Path::new("./"), "test", Some("asicam_test"), true, true)
             .unwrap();
     }
 }

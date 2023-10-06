@@ -10,7 +10,7 @@ use std::{
     time::{Duration, SystemTime},
 };
 
-use cameraunit_asi::{num_cameras, open_first_camera, ASIImageFormat, CameraInfo, CameraUnit, Error, ImageData, ROI};
+use cameraunit_asi::{num_cameras, open_first_camera, ASIImageFormat, CameraInfo, CameraUnit, Error, DynamicSerialImage, OptimumExposureConfig, ROI};
 use chrono::{DateTime, Local};
 use configparser::ini::Ini;
 
@@ -99,8 +99,17 @@ fn main() {
     .unwrap();
     cam.set_image_fmt(ASIImageFormat::ImageRAW16).unwrap();
     cam.set_exposure(Duration::from_millis(100)).unwrap();
+    let exp_ctrl = OptimumExposureConfig::new(
+        (cfg.percentile * 0.01) as f32,
+        cfg.target_val as f32,
+        cfg.target_uncertainty as f32,
+        100,
+        cam.get_min_exposure().unwrap_or(Duration::from_millis(1)),
+        cfg.max_exposure,
+        cfg.max_bin as u16,
+    ).unwrap();
     while !done.load(Ordering::SeqCst) {
-        let img: ImageData;
+        let img: DynamicSerialImage;
         let res = cam.capture_image();
         match res {
             Ok(im) => img = im,
@@ -131,7 +140,7 @@ fn main() {
         if !dir_prefix.exists() {
             std::fs::create_dir_all(&dir_prefix).unwrap();
         }
-        let res = img.save_fits(&dir_prefix, "comic", &cfg.progname, true, true);
+        let res = img.clone().savefits(&dir_prefix, "comic", Some(&cfg.progname), true, true);
         if let Err(res) = res {
             let res = match res {
                 fitsio::errors::Error::ExistingFile(res) => res,
@@ -158,17 +167,7 @@ fn main() {
                 cam.get_exposure().as_secs_f32()
             );
         }
-        let (exposure, _bin) = img
-            .find_optimum_exposure(
-                cfg.percentile as f32,
-                cfg.target_val as f32,
-                cfg.target_uncertainty as f32,
-                cam.get_min_exposure().unwrap_or(Duration::from_millis(1)),
-                cfg.max_exposure,
-                cfg.max_bin as u16,
-                100 as u32,
-            )
-            .unwrap();
+        let (exposure, _bin) = exp_ctrl.find_optimum_exposure(img.into_luma().into_vec(), img.get_metadata().unwrap().exposure, img.get_metadata().unwrap().bin_x as u8).unwrap_or((Duration::from_millis(100), 1));
         if exposure != cam.get_exposure() {
             println!(
                 "\n[{}] AERO: Exposure changed from {:.3} s to {:.3} s",

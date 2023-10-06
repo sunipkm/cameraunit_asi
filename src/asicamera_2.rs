@@ -18,9 +18,7 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-use cameraunit::{CameraInfo, CameraUnit, Error, ROI};
-use cameraunit::{ImageData, ImageMetaData};
-use image::DynamicImage;
+use cameraunit::{CameraInfo, CameraUnit, Error, ROI, DynamicSerialImage, ImageMetaData, SerialImageBuffer};
 use log::{info, warn};
 
 /// This object describes a ZWO ASI camera, and provides methods for control and image capture.
@@ -777,7 +775,7 @@ impl CameraUnit for CameraUnitASI {
     ///  - [`cameraunit::Error::ExposureFailed`] - Exposure failed.
     ///  - [`cameraunit::Error::TimedOut`] - Exposure timed out.
     ///  - [`cameraunit::Error::GeneralError`] - The camera is in video capture mode.
-    fn capture_image(&self) -> Result<ImageData, Error> {
+    fn capture_image(&self) -> Result<DynamicSerialImage, Error> {
         let start_time: SystemTime;
         let roi: ASIRoiMode;
         {
@@ -858,7 +856,7 @@ impl CameraUnit for CameraUnitASI {
             *capturing = false;
             return Err(Error::ExposureFailed("Exposure timed out".to_owned()));
         } else {
-            let img = match roi.fmt {
+            let mut img = match roi.fmt {
                 ASIImageFormat::ImageRAW8 => {
                     let mut data = vec![0u8; (roi.width * roi.height) as usize];
                     let res = unsafe {
@@ -876,10 +874,14 @@ impl CameraUnit for CameraUnitASI {
                         return Err(Error::TimedOut);
                     }
                     *capturing = false; // whether the call succeeds or fails, we are not capturing anymore
-                    let mut img =
-                        DynamicImage::new_luma8(roi.width as u32, roi.height as u32).into_luma8();
-                    img.copy_from_slice(&data);
-                    DynamicImage::from(img)
+                    let img: DynamicSerialImage = SerialImageBuffer::<u8>::from_vec(
+                        roi.width as usize,
+                        roi.height as usize,
+                        data,
+                    )
+                    .unwrap()
+                    .into();
+                    img
                 }
                 ASIImageFormat::ImageRAW16 => {
                     let mut data = vec![0u16; (roi.width * roi.height) as usize];
@@ -898,10 +900,14 @@ impl CameraUnit for CameraUnitASI {
                         return Err(Error::TimedOut);
                     }
                     *capturing = false; // whether the call succeeds or fails, we are not capturing anymore
-                    let mut img =
-                        DynamicImage::new_luma16(roi.width as u32, roi.height as u32).into_luma16();
-                    img.copy_from_slice(&data);
-                    DynamicImage::from(img)
+                    let img: DynamicSerialImage = SerialImageBuffer::<u16>::from_vec(
+                        roi.width as usize,
+                        roi.height as usize,
+                        data,
+                    )
+                    .unwrap()
+                    .into();
+                    img
                 }
                 ASIImageFormat::ImageRGB24 => {
                     let mut data = vec![0u8; (roi.width * roi.height * 3) as usize];
@@ -920,11 +926,14 @@ impl CameraUnit for CameraUnitASI {
                         return Err(Error::TimedOut);
                     }
                     *capturing = false; // whether the call succeeds or fails, we are not capturing anymore
-                    let mut img =
-                        DynamicImage::new_rgb8(roi.width as u32, roi.height as u32).into_rgb8();
-                    img.copy_from_slice(&data);
-
-                    DynamicImage::from(img)
+                    let img: DynamicSerialImage = SerialImageBuffer::<u8>::from_vec(
+                        roi.width as usize,
+                        roi.height as usize,
+                        data,
+                    )
+                    .unwrap()
+                    .into();
+                    img
                 }
             };
             let mut meta = ImageMetaData::full_builder(
@@ -952,8 +961,9 @@ impl CameraUnit for CameraUnitASI {
                     }
                 ),
             );
+            img.set_metadata(meta);
 
-            return Ok(ImageData::new(img, meta));
+            return Ok(img);
         }
     }
 
@@ -1043,7 +1053,7 @@ impl CameraUnit for CameraUnitASI {
     ///  - [`cameraunit::Error::TimedOut`]: Exposure download timed out.
     ///  - [`cameraunit::Error::InvalidId`]: Invalid camera ID.
     ///  - [`cameraunit::Error::CameraClosed`]: Camera is closed.
-    fn download_image(&self) -> Result<ImageData, Error> {
+    fn download_image(&self) -> Result<DynamicSerialImage, Error> {
         let mut capturing = self.capturing.lock().unwrap();
         let stat = self.get_exposure_status()?;
         match stat {
@@ -1060,7 +1070,7 @@ impl CameraUnit for CameraUnitASI {
             }
             ASIExposureStatus::Success => {
                 let roi = self.get_roi_format()?;
-                let img = match roi.fmt {
+                let mut img = match roi.fmt {
                     ASIImageFormat::ImageRAW8 => {
                         let mut data = vec![0u8; (roi.width * roi.height) as usize];
                         let res = unsafe {
@@ -1078,10 +1088,14 @@ impl CameraUnit for CameraUnitASI {
                             return Err(Error::TimedOut);
                         }
                         *capturing = false; // whether the call succeeds or fails, we are not capturing anymore
-                        let mut img = DynamicImage::new_luma8(roi.width as u32, roi.height as u32)
-                            .into_luma8();
-                        img.copy_from_slice(&data);
-                        DynamicImage::from(img)
+                        let img: DynamicSerialImage = SerialImageBuffer::<u8>::from_vec(
+                            roi.width as usize,
+                            roi.height as usize,
+                            data,
+                        )
+                        .unwrap()
+                        .into();
+                        img
                     }
                     ASIImageFormat::ImageRAW16 => {
                         let mut data = vec![0u16; (roi.width * roi.height) as usize];
@@ -1100,10 +1114,14 @@ impl CameraUnit for CameraUnitASI {
                             return Err(Error::TimedOut);
                         }
                         *capturing = false; // whether the call succeeds or fails, we are not capturing anymore
-                        let mut img = DynamicImage::new_luma16(roi.width as u32, roi.height as u32)
-                            .into_luma16();
-                        img.copy_from_slice(&data);
-                        DynamicImage::from(img)
+                        let img: DynamicSerialImage = SerialImageBuffer::<u16>::from_vec(
+                            roi.width as usize,
+                            roi.height as usize,
+                            data,
+                        )
+                        .unwrap()
+                        .into();
+                        img
                     }
                     ASIImageFormat::ImageRGB24 => {
                         let mut data = vec![0u8; (roi.width * roi.height * 3) as usize];
@@ -1122,11 +1140,14 @@ impl CameraUnit for CameraUnitASI {
                             return Err(Error::TimedOut);
                         }
                         *capturing = false; // whether the call succeeds or fails, we are not capturing anymore
-                        let mut img =
-                            DynamicImage::new_rgb8(roi.width as u32, roi.height as u32).into_rgb8();
-                        img.copy_from_slice(&data);
-
-                        DynamicImage::from(img)
+                        let img: DynamicSerialImage = SerialImageBuffer::<u8>::from_vec(
+                            roi.width as usize,
+                            roi.height as usize,
+                            data,
+                        )
+                        .unwrap()
+                        .into();
+                        img
                     }
                 };
                 let mut meta = ImageMetaData::full_builder(
@@ -1154,8 +1175,8 @@ impl CameraUnit for CameraUnitASI {
                         }
                     ),
                 );
-
-                return Ok(ImageData::new(img, meta));
+                img.set_metadata(meta);
+                return Ok(img);
             }
         }
     }
@@ -1481,7 +1502,7 @@ impl CameraUnit for CameraUnitASI {
     }
 
     /// Check if the image is flipped along X and/or Y axes.
-    /// 
+    ///
     /// # Returns
     ///  * `(x, y)` - Whether the image is flipped along the X and/or Y axes. Both `false` may indicate error getting the flip status.
     fn get_flip(&self) -> (bool, bool) {
