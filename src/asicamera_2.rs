@@ -1,12 +1,9 @@
 #![warn(missing_docs)]
-mod asicamera2_bindings;
-use asicamera2_bindings::*;
 
 use std::{
     collections::HashMap,
     ffi::{c_long, c_uchar, CStr},
     fmt::Display,
-    io::{self, Write},
     mem::MaybeUninit,
     os::raw,
     str,
@@ -17,6 +14,8 @@ use std::{
     thread::sleep,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
+
+use crate::zwo_ffi::*;
 
 use cameraunit::{CameraInfo, CameraUnit, Error, ROI, DynamicSerialImage, ImageMetaData, SerialImageBuffer};
 use log::{info, warn};
@@ -65,11 +64,11 @@ pub struct ASICameraProps {
     name: String,
     id: i32,
     uuid: [u8; 8],
-    max_height: i64,
-    max_width: i64,
+    max_height: u32,
+    max_width: u32,
     is_color_cam: bool,
     bayer_pattern: Option<ASIBayerPattern>,
-    supported_bins: Vec<i32>,
+    supported_bins: Vec<u32>,
     supported_formats: Vec<ASIImageFormat>,
     pixel_size: f64,
     mechanical_shutter: bool,
@@ -169,8 +168,8 @@ pub fn open_camera(id: i32) -> Result<(CameraUnitASI, CameraInfoASI), Error> {
             name: string_from_char(&info.Name),
             id: info.CameraID,
             uuid: [0; 8],
-            max_height: info.MaxHeight.into(),
-            max_width: info.MaxWidth.into(),
+            max_height: info.MaxHeight as u32,
+            max_width: info.MaxWidth as u32,
             is_color_cam: info.IsColorCam == ASI_BOOL_ASI_TRUE,
             bayer_pattern: if info.IsColorCam == ASI_BOOL_ASI_TRUE {
                 ASIBayerPattern::from_u32(info.BayerPattern)
@@ -178,10 +177,10 @@ pub fn open_camera(id: i32) -> Result<(CameraUnitASI, CameraInfoASI), Error> {
                 None
             },
             supported_bins: {
-                let mut bins: Vec<i32> = Vec::new();
+                let mut bins: Vec<u32> = Vec::new();
                 for x in info.SupportedBins.iter() {
                     if *x != 0 {
-                        bins.push(*x);
+                        bins.push(*x as u32);
                     } else {
                         break;
                     }
@@ -255,9 +254,9 @@ pub fn open_camera(id: i32) -> Result<(CameraUnitASI, CameraInfoASI), Error> {
             },
             roi: ROI {
                 x_min: 0,
-                x_max: prop.max_width as i32,
                 y_min: 0,
-                y_max: prop.max_height as i32,
+                width: prop.max_width,
+                height: prop.max_height,
                 bin_x: 1,
                 bin_y: 1,
             },
@@ -266,9 +265,9 @@ pub fn open_camera(id: i32) -> Result<(CameraUnitASI, CameraInfoASI), Error> {
 
         cobj.set_start_pos(0, 0)?;
         cobj.set_roi_format(&ASIRoiMode {
-            width: cobj.roi.x_max - cobj.roi.x_min,
-            height: cobj.roi.y_max - cobj.roi.y_min,
-            bin: cobj.roi.bin_x,
+            width: cobj.roi.width as i32,
+            height: cobj.roi.height as i32,
+            bin: cobj.roi.bin_x as i32,
             fmt: cobj.image_fmt,
         })?;
 
@@ -641,7 +640,7 @@ impl CameraInfo for CameraUnitASI {
     ///  - [`cameraunit::Error::CameraClosed`] - Camera is closed
     fn cancel_capture(&self) -> Result<(), Error> {
         let mut capturing = self.capturing.lock().unwrap();
-        if *capturing {
+        if !*capturing {
             return Ok(());
         }
         sys_cancel_capture(self.id.0)?;
@@ -801,7 +800,7 @@ impl CameraUnit for CameraUnitASI {
                     if self.is_dark_frame {
                         ASI_BOOL_ASI_TRUE as i32
                     } else {
-                        ASI_BOOL_ASI_TRUE as i32
+                        ASI_BOOL_ASI_FALSE as i32
                     },
                 )
             };
@@ -1181,11 +1180,11 @@ impl CameraUnit for CameraUnitASI {
         }
     }
 
-    fn get_bin_x(&self) -> i32 {
+    fn get_bin_x(&self) -> u32 {
         self.roi.bin_x
     }
 
-    fn get_bin_y(&self) -> i32 {
+    fn get_bin_y(&self) -> u32 {
         self.roi.bin_y
     }
 
@@ -1373,46 +1372,24 @@ impl CameraUnit for CameraUnitASI {
         let mut roi = *roi;
         roi.bin_y = roi.bin_x;
 
-        if roi.x_max <= 0 {
-            roi.x_max = self.props.max_width as i32;
+        if roi.width + roi.x_min > self.props.max_width / roi.bin_x {
+            roi.width = (self.props.max_width - roi.x_min) as u32 / roi.bin_x;
         }
-        if roi.y_max <= 0 {
-            roi.y_max = self.props.max_height as i32;
+        if roi.height + roi.y_min > self.props.max_height / roi.bin_y {
+            roi.height = (self.props.max_height - roi.y_min) as u32 / roi.bin_y;
         }
 
-        roi.x_min /= roi.bin_x;
-        roi.x_max /= roi.bin_x;
-        roi.y_min /= roi.bin_y;
-        roi.y_max /= roi.bin_y;
+        roi.width -= roi.width % 8;
+        roi.height -= roi.height % 2;
 
-        let mut width = roi.x_max - roi.x_min;
-        width -= width % 8;
-        let mut height = roi.y_max - roi.y_min;
-        height -= height % 2;
-
-        roi.x_max = roi.x_min + width;
-        roi.y_max = roi.y_min + height;
-
-        if width < 0 || height < 0 {
+        if roi.width > self.props.max_width / self.roi.bin_x || roi.height > self.props.max_height / self.roi.bin_y {
             return Err(Error::InvalidValue(
                 "ROI width and height must be positive".to_owned(),
             ));
         }
 
-        if roi.x_max > self.props.max_width as i32 / roi.bin_x {
-            return Err(Error::OutOfBounds(
-                "ROI x_max is greater than max width".to_owned(),
-            ));
-        }
-
-        if roi.y_max > self.props.max_height as i32 / roi.bin_y {
-            return Err(Error::OutOfBounds(
-                "ROI y_max is greater than max height".to_owned(),
-            ));
-        }
-
         if !self.props.is_usb3_camera && self.camera_name().contains("ASI120") {
-            if width * height % 1024 != 0 {
+            if roi.width * roi.height % 1024 != 0 {
                 return Err(Error::InvalidValue(
                     "ASI120 cameras require ROI width * height to be a multiple of 1024".to_owned(),
                 ));
@@ -1432,15 +1409,15 @@ impl CameraUnit for CameraUnitASI {
             "Current ROI: {} x {}, Bin: {}, Format: {:#?}",
             roi_md.width, roi_md.height, roi_md.bin, roi_md.fmt
         );
-        info!("New ROI: {} x {}, Bin: {}", width, height, roi.bin_x);
+        info!("New ROI: {} x {}, Bin: {}", roi.width, roi.height, roi.bin_x);
 
-        roi_md.width = width;
-        roi_md.height = height;
-        roi_md.bin = roi.bin_x;
+        roi_md.width = roi.width as i32;
+        roi_md.height = roi.height as i32;
+        roi_md.bin = roi.bin_x as i32;
 
         self.set_roi_format(&roi_md)?;
 
-        if self.set_start_pos(roi.x_min, roi.y_min).is_err() {
+        if self.set_start_pos(roi.x_min as i32, roi.y_min as i32).is_err() {
             self.set_roi_format(&roi_md_old)?;
         }
         self.roi = roi;
@@ -1738,7 +1715,6 @@ struct ASICamId(i32);
 
 impl Drop for ASICamId {
     fn drop(&mut self) {
-        io::stdout().flush().unwrap();
         let res = unsafe { ASIStopExposure(self.0) };
         if res == ASI_ERROR_CODE_ASI_ERROR_INVALID_ID as i32 {
             warn!("StopExp: Invalid camera ID: {}", self.0);
@@ -1788,7 +1764,7 @@ fn get_control_caps(id: i32) -> Result<Vec<ASIControlCaps>, Error> {
         } else if res == ASI_ERROR_CODE_ASI_ERROR_CAMERA_CLOSED as i32 {
             return Err(Error::CameraClosed);
         }
-        if cap.ControlType as i32 > (ASIControlType::AntiDewHeater as i32).into() {
+        if cap.ControlType > ASIControlType::AntiDewHeater as u32 {
             break;
         }
         let cap = ASIControlCaps {
@@ -1809,11 +1785,7 @@ fn get_control_caps(id: i32) -> Result<Vec<ASIControlCaps>, Error> {
 }
 
 fn get_gain_minmax(caps: &Vec<ASIControlCaps>) -> (i64, i64) {
-    let minmax = get_controlcap_minmax(caps, ASIControlType::Gain);
-    if let Some((min, max)) = minmax {
-        return (min, max);
-    }
-    (0, 0)
+    get_controlcap_minmax(caps, ASIControlType::Gain).unwrap_or((0, 0))
 }
 
 fn get_exposure_minmax(caps: &Vec<ASIControlCaps>) -> (Duration, Duration) {

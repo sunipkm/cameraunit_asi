@@ -7,10 +7,13 @@ use std::{
         Arc,
     },
     thread::{self, sleep},
-    time::{Duration, SystemTime},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-use cameraunit_asi::{num_cameras, open_first_camera, ASIImageFormat, CameraInfo, CameraUnit, Error, DynamicSerialImage, OptimumExposureConfig, ROI};
+use cameraunit_asi::{
+    num_cameras, open_first_camera, ASIImageFormat, CameraInfo, CameraUnit, DynamicSerialImage,
+    Error, OptimumExposureConfig, ROI,
+};
 use chrono::{DateTime, Local};
 use configparser::ini::Ini;
 
@@ -33,15 +36,15 @@ fn get_out_dir() -> PathBuf {
 }
 
 fn main() {
-    let cfg =
-        ASICamconfig::from_ini(&get_out_dir().join("asicam.ini"))
-            .unwrap_or_else(|_| {
-                println!("Error reading config file {:#?}, using defaults", &get_out_dir().join("asicam.ini").as_os_str());
-                let cfg = ASICamconfig::default();
-                cfg.to_ini(&get_out_dir().join("asicam.ini"))
-                    .unwrap();
-                cfg
-            });
+    let cfg = ASICamconfig::from_ini(&get_out_dir().join("asicam.ini")).unwrap_or_else(|_| {
+        println!(
+            "Error reading config file {:#?}, using defaults",
+            &get_out_dir().join("asicam.ini").as_os_str()
+        );
+        let cfg = ASICamconfig::default();
+        cfg.to_ini(&get_out_dir().join("asicam.ini")).unwrap();
+        cfg
+    });
     let num_cameras = num_cameras();
     println!("Found {} cameras", num_cameras);
     if num_cameras <= 0 {
@@ -80,7 +83,7 @@ fn main() {
                 "[{}] Camera temperature: {:>+05.1} C, Cooler Power: {:>3}%\t",
                 dtime.format("%H:%M:%S"),
                 temp,
-                &caminfo.get_cooler_power().unwrap()
+                caminfo.get_cooler_power().unwrap()
             );
             io::stdout().flush().unwrap();
             print!("\r");
@@ -91,8 +94,8 @@ fn main() {
     cam.set_roi(&ROI {
         x_min: 300,
         y_min: 800,
-        x_max: 2700,
-        y_max: 2100,
+        width: 2400,
+        height: 1300,
         bin_x: 1,
         bin_y: 1,
     })
@@ -107,40 +110,54 @@ fn main() {
         cam.get_min_exposure().unwrap_or(Duration::from_millis(1)),
         cfg.max_exposure,
         cfg.max_bin as u16,
-    ).unwrap();
-    while !done.load(Ordering::SeqCst) {
-        let img: DynamicSerialImage;
+    )
+    .unwrap();
+    'main_loop: while !done.load(Ordering::SeqCst) {
+        let mut img: DynamicSerialImage;
+        let exp_start: DateTime<Local> = SystemTime::now().into();
         let res = cam.capture_image();
         match res {
             Ok(im) => img = im,
             Err(err) => match err {
                 Error::CameraClosed => {
                     done.store(true, Ordering::SeqCst);
-                    break;
+                    break 'main_loop;
                 }
                 Error::CameraRemoved => {
                     done.store(true, Ordering::SeqCst);
-                    break;
+                    break 'main_loop;
                 }
                 Error::InvalidId(_) => {
                     done.store(true, Ordering::SeqCst);
-                    break;
+                    break 'main_loop;
                 }
                 Error::ExposureFailed(msg) => {
                     println!("Exposure failed: {}", msg);
-                    continue;
+                    continue 'main_loop;
                 }
                 _ => {
-                    continue;
+                    continue 'main_loop;
                 }
             },
         }
-        let val: DateTime<Local> = SystemTime::now().into();
-        let dir_prefix = Path::new(&cfg.savedir).join(val.format("%Y%m%d").to_string());
+        let mut metadata = img.get_metadata().unwrap(); // CameraUnit_ASI guarantees this
+        metadata.add_extended_attrib(
+            "exposure_end",
+            &format!(
+                "{}",
+                SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs_f64()
+            ),
+        );
+        img.set_metadata(metadata);
+        let dir_prefix = Path::new(&cfg.savedir).join(exp_start.format("%Y%m%d").to_string());
         if !dir_prefix.exists() {
             std::fs::create_dir_all(&dir_prefix).unwrap();
         }
-        let res = img.clone().savefits(&dir_prefix, "comic", Some(&cfg.progname), true, true);
+        let res = img
+            .savefits(&dir_prefix, "comic", Some(&cfg.progname), true, true);
         if let Err(res) = res {
             let res = match res {
                 fitsio::errors::Error::ExistingFile(res) => res,
@@ -157,27 +174,33 @@ fn main() {
 
             println!(
                 "\n[{}] AERO: Error saving image: {:#?}",
-                val.format("%H:%M:%S"),
+                exp_start.format("%H:%M:%S"),
                 res
             );
         } else {
             println!(
-                "[\n{}] AERO: Saved image, exposure {:.3} s",
-                val.format("%H:%M:%S"),
+                "\n[{}] AERO: Saved image, exposure {:.3} s",
+                exp_start.format("%H:%M:%S"),
                 cam.get_exposure().as_secs_f32()
             );
         }
-        let (exposure, _bin) = exp_ctrl.find_optimum_exposure(img.into_luma().into_vec(), img.get_metadata().unwrap().exposure, img.get_metadata().unwrap().bin_x as u8).unwrap_or((Duration::from_millis(100), 1));
+        let (exposure, _bin) = exp_ctrl
+            .find_optimum_exposure(
+                img.into_luma().into_vec(),
+                img.get_metadata().unwrap().exposure,
+                img.get_metadata().unwrap().bin_x as u8,
+            )
+            .unwrap_or((Duration::from_millis(100), 1));
         if exposure != cam.get_exposure() {
             println!(
                 "\n[{}] AERO: Exposure changed from {:.3} s to {:.3} s",
-                val.format("%H:%M:%S"),
+                exp_start.format("%H:%M:%S"),
                 cam.get_exposure().as_secs_f32(),
                 exposure.as_secs_f32()
             );
             cam.set_exposure(exposure).unwrap();
         }
-        let val: SystemTime = val.into();
+        let val: SystemTime = exp_start.into();
         if val < SystemTime::now() && !done.load(Ordering::SeqCst) {
             sleep(SystemTime::now().duration_since(val).unwrap());
         }

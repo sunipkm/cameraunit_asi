@@ -1,4 +1,5 @@
 #![cfg(not(windows))]
+mod zwo_ffi;
 mod asicamera_2;
 
 pub use asicamera_2::{
