@@ -230,10 +230,8 @@ impl ASICamconfig {
     fn from_ini(path: &PathBuf) -> Result<ASICamconfig, String> {
         let config = Ini::new().load(path)?;
         let mut cfg = ASICamconfig::default();
-        if config.contains_key("program") {
-            if config["program"].contains_key("name") {
-                cfg.progname = config["program"]["name"].clone().unwrap();
-            }
+        if config.contains_key("program") && config["program"].contains_key("name") {
+            cfg.progname = config["program"]["name"].clone().unwrap();
         }
         if !config.contains_key("config") {
             return Err("No config section found".to_string());

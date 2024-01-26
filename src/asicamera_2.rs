@@ -17,7 +17,9 @@ use std::{
 
 use crate::zwo_ffi::*;
 
-use cameraunit::{CameraInfo, CameraUnit, Error, ROI, DynamicSerialImage, ImageMetaData, SerialImageBuffer};
+use cameraunit::{
+    CameraInfo, CameraUnit, DynamicSerialImage, Error, ImageMetaData, SerialImageBuffer, ROI,
+};
 use log::{info, warn};
 
 /// This object describes a ZWO ASI camera, and provides methods for control and image capture.
@@ -110,14 +112,14 @@ pub fn get_camera_ids() -> Option<HashMap<i32, String>> {
         let mut map: HashMap<i32, String> = HashMap::with_capacity(num_cameras as usize);
         for i in 0..num_cameras {
             let info = get_camera_prop_by_idx(i);
-            if let Err(_) = info {
+            if info.is_err() {
                 continue;
             } else {
                 let info = info.unwrap();
                 map.insert(info.CameraID, string_from_char(&info.Name));
             }
         }
-        if map.len() == 0 {
+        if map.is_empty() {
             return None;
         }
         Some(map)
@@ -237,10 +239,10 @@ pub fn open_camera(id: i32) -> Result<(CameraUnitASI, CameraInfoASI), Error> {
             props: Box::new(prop.clone()),
             cooler_on: Arc::new(AtomicBool::new(false)),
             // control_caps: ccaps,
-            gain_min: gain_min,
-            gain_max: gain_max,
-            exp_min: exp_min,
-            exp_max: exp_max,
+            gain_min,
+            gain_max,
+            exp_min,
+            exp_max,
             exposure: Duration::from_millis(100),
             is_dark_frame: false,
             image_fmt: {
@@ -283,9 +285,9 @@ pub fn open_camera(id: i32) -> Result<(CameraUnitASI, CameraInfoASI), Error> {
             is_cooler_cam: prop.is_cooler_cam,
         };
 
-        return Ok((cobj, cinfo));
+        Ok((cobj, cinfo))
     } else {
-        return Err(Error::NoCamerasAvailable);
+        Err(Error::NoCamerasAvailable)
     }
 }
 
@@ -319,9 +321,9 @@ pub fn open_first_camera() -> Result<(CameraUnitASI, CameraInfoASI), Error> {
     let ids = get_camera_ids();
     if let Some(ids) = ids {
         let val = ids.iter().next().unwrap();
-        return open_camera(*val.0);
+        open_camera(*val.0)
     } else {
-        return Err(Error::NoCamerasAvailable);
+        Err(Error::NoCamerasAvailable)
     }
 }
 
@@ -463,9 +465,9 @@ impl CameraUnitASI {
         }
         if let Some(fmt) = ASIImageFormat::from_u32(fmt as u32) {
             roi.fmt = fmt;
-            return Ok(roi);
+            Ok(roi)
         } else {
-            return Err(Error::InvalidMode(format!("Invalid image format: {}", fmt)));
+            Err(Error::InvalidMode(format!("Invalid image format: {}", fmt)))
         }
     }
 
@@ -658,11 +660,11 @@ impl CameraInfo for CameraUnitASI {
     }
 
     fn get_ccd_height(&self) -> u32 {
-        self.props.max_height as u32
+        self.props.max_height
     }
 
     fn get_ccd_width(&self) -> u32 {
-        self.props.max_width as u32
+        self.props.max_width
     }
 
     fn get_pixel_size(&self) -> Option<f32> {
@@ -844,7 +846,7 @@ impl CameraUnit for CameraUnitASI {
         let mut capturing = self.capturing.lock().unwrap(); // we are not dropping this until we return, so no problem reading exposure or roi
         if stat == ASIExposureStatus::Failed {
             *capturing = false;
-            return Err(Error::ExposureFailed("Unknown".to_owned()));
+            Err(Error::ExposureFailed("Unknown".to_owned()))
         } else if stat == ASIExposureStatus::Idle {
             *capturing = false;
             return Err(Error::ExposureFailed(
@@ -936,10 +938,10 @@ impl CameraUnit for CameraUnitASI {
                 }
             };
             let mut meta = ImageMetaData::full_builder(
-                self.get_bin_x() as u32,
-                self.get_bin_y() as u32,
-                self.roi.y_min as u32,
-                self.roi.x_min as u32,
+                self.get_bin_x(),
+                self.get_bin_y(),
+                self.roi.y_min,
+                self.roi.x_min,
                 self.get_temperature().unwrap_or(-273.0),
                 self.exposure,
                 start_time,
@@ -951,14 +953,11 @@ impl CameraUnit for CameraUnitASI {
             );
             meta.add_extended_attrib(
                 "DARK_FRAME",
-                &format!(
-                    "{}",
-                    if !self.get_shutter_open().unwrap_or(false) {
-                        "True"
-                    } else {
-                        "False"
-                    }
-                ),
+                if !self.get_shutter_open().unwrap_or(false) {
+                    "True"
+                } else {
+                    "False"
+                },
             );
             img.set_metadata(meta);
 
@@ -994,7 +993,7 @@ impl CameraUnit for CameraUnitASI {
                     if self.is_dark_frame {
                         ASI_BOOL_ASI_TRUE as i32
                     } else {
-                        ASI_BOOL_ASI_TRUE as i32
+                        ASI_BOOL_ASI_FALSE as i32
                     },
                 )
             };
@@ -1150,10 +1149,10 @@ impl CameraUnit for CameraUnitASI {
                     }
                 };
                 let mut meta = ImageMetaData::full_builder(
-                    self.get_bin_x() as u32,
-                    self.get_bin_y() as u32,
-                    self.roi.y_min as u32,
-                    self.roi.x_min as u32,
+                    self.get_bin_x(),
+                    self.get_bin_y(),
+                    self.roi.y_min,
+                    self.roi.x_min,
                     self.get_temperature().unwrap_or(-273.0),
                     self.exposure,
                     *self.last_img_start.lock().unwrap(),
@@ -1165,17 +1164,14 @@ impl CameraUnit for CameraUnitASI {
                 );
                 meta.add_extended_attrib(
                     "DARK_FRAME",
-                    &format!(
-                        "{}",
-                        if !self.get_shutter_open().unwrap_or(false) {
-                            "True"
-                        } else {
-                            "False"
-                        }
-                    ),
+                    if !self.get_shutter_open().unwrap_or(false) {
+                        "True"
+                    } else {
+                        "False"
+                    },
                 );
                 img.set_metadata(meta);
-                return Ok(img);
+                Ok(img)
             }
         }
     }
@@ -1207,7 +1203,7 @@ impl CameraUnit for CameraUnitASI {
     }
 
     fn get_roi(&self) -> &ROI {
-        return &self.roi;
+        &self.roi
     }
 
     /// Get the raw camera gain.
@@ -1218,7 +1214,7 @@ impl CameraUnit for CameraUnitASI {
     fn get_gain_raw(&self) -> i64 {
         let res = get_control_value(self.id.0, ASIControlType::Gain);
         if let Ok((val, _)) = res {
-            return val.into();
+            return val;
         }
         0
     }
@@ -1294,7 +1290,7 @@ impl CameraUnit for CameraUnitASI {
     ///  - [`cameraunit::Error::InvalidId`] - Invalid camera ID.
     ///  - [`cameraunit::Error::CameraClosed`] - Camera is closed.
     fn set_gain(&mut self, gain: f32) -> Result<f32, Error> {
-        if gain < 0.0 || gain > 100.0 {
+        if !(0.0..=100.0).contains(&gain) {
             return Err(Error::InvalidValue(format!(
                 "Gain {} is outside of range 0-100",
                 gain
@@ -1302,7 +1298,7 @@ impl CameraUnit for CameraUnitASI {
         }
         let gain = (gain * (self.gain_max as f32 - self.gain_min as f32) / 100.0
             + self.gain_min as f32) as c_long;
-        let gain = self.set_gain_raw(gain.into())?;
+        let gain = self.set_gain_raw(gain)?;
         Ok((gain as f32 - self.gain_min as f32) * 100.0
             / (self.gain_max as f32 - self.gain_min as f32))
     }
@@ -1373,27 +1369,27 @@ impl CameraUnit for CameraUnitASI {
         roi.bin_y = roi.bin_x;
 
         if roi.width + roi.x_min > self.props.max_width / roi.bin_x {
-            roi.width = (self.props.max_width - roi.x_min) as u32 / roi.bin_x;
+            roi.width = (self.props.max_width - roi.x_min) / roi.bin_x;
         }
         if roi.height + roi.y_min > self.props.max_height / roi.bin_y {
-            roi.height = (self.props.max_height - roi.y_min) as u32 / roi.bin_y;
+            roi.height = (self.props.max_height - roi.y_min) / roi.bin_y;
         }
 
         roi.width -= roi.width % 8;
         roi.height -= roi.height % 2;
 
-        if roi.width > self.props.max_width / self.roi.bin_x || roi.height > self.props.max_height / self.roi.bin_y {
+        if roi.width > self.props.max_width / self.roi.bin_x
+            || roi.height > self.props.max_height / self.roi.bin_y
+        {
             return Err(Error::InvalidValue(
                 "ROI width and height must be positive".to_owned(),
             ));
         }
 
-        if !self.props.is_usb3_camera && self.camera_name().contains("ASI120") {
-            if roi.width * roi.height % 1024 != 0 {
-                return Err(Error::InvalidValue(
-                    "ASI120 cameras require ROI width * height to be a multiple of 1024".to_owned(),
-                ));
-            }
+        if !self.props.is_usb3_camera && self.camera_name().contains("ASI120") && roi.width * roi.height % 1024 != 0 {
+            return Err(Error::InvalidValue(
+                "ASI120 cameras require ROI width * height to be a multiple of 1024".to_owned(),
+            ));
         }
 
         let capturing = self.capturing.lock().unwrap();
@@ -1409,7 +1405,10 @@ impl CameraUnit for CameraUnitASI {
             "Current ROI: {} x {}, Bin: {}, Format: {:#?}",
             roi_md.width, roi_md.height, roi_md.bin, roi_md.fmt
         );
-        info!("New ROI: {} x {}, Bin: {}", roi.width, roi.height, roi.bin_x);
+        info!(
+            "New ROI: {} x {}, Bin: {}",
+            roi.width, roi.height, roi.bin_x
+        );
 
         roi_md.width = roi.width as i32;
         roi_md.height = roi.height as i32;
@@ -1417,7 +1416,10 @@ impl CameraUnit for CameraUnitASI {
 
         self.set_roi_format(&roi_md)?;
 
-        if self.set_start_pos(roi.x_min as i32, roi.y_min as i32).is_err() {
+        if self
+            .set_start_pos(roi.x_min as i32, roi.y_min as i32)
+            .is_err()
+        {
             self.set_roi_format(&roi_md_old)?;
         }
         self.roi = roi;
@@ -1772,9 +1774,9 @@ fn get_control_caps(id: i32) -> Result<Vec<ASIControlCaps>, Error> {
                 .ok_or(Error::InvalidControlType(cap.ControlType.to_string()))?,
             name: cap.Name,
             description: cap.Description,
-            min_value: cap.MinValue.into(),
-            max_value: cap.MaxValue.into(),
-            default_value: cap.DefaultValue.into(),
+            min_value: cap.MinValue,
+            max_value: cap.MaxValue,
+            default_value: cap.DefaultValue,
             is_auto_supported: cap.IsAutoSupported == ASI_BOOL_ASI_TRUE,
             is_writable: cap.IsWritable == ASI_BOOL_ASI_TRUE,
         };
@@ -1796,7 +1798,7 @@ fn get_exposure_minmax(caps: &Vec<ASIControlCaps>) -> (Duration, Duration) {
             Duration::from_micros(max as u64),
         );
     }
-    (Duration::from_micros(1000 as u64), Duration::from_secs(200))
+    (Duration::from_micros(1000_u64), Duration::from_secs(200))
 }
 
 fn get_controlcap_minmax(caps: &Vec<ASIControlCaps>, id: ASIControlType) -> Option<(i64, i64)> {
