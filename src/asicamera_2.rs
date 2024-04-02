@@ -17,7 +17,9 @@ use std::{
 
 use crate::zwo_ffi::*;
 
-use cameraunit::{CameraInfo, CameraUnit, Error, ROI, DynamicSerialImage, ImageMetaData, SerialImageBuffer};
+use cameraunit::{
+    CameraInfo, CameraUnit, DynamicSerialImage, Error, ImageMetaData, SerialImageBuffer, ROI,
+};
 use log::{info, warn};
 
 /// This object describes a ZWO ASI camera, and provides methods for control and image capture.
@@ -1376,7 +1378,9 @@ impl CameraUnit for CameraUnitASI {
         roi.width -= roi.width % 8;
         roi.height -= roi.height % 2;
 
-        if roi.width > self.props.max_width / self.roi.bin_x || roi.height > self.props.max_height / self.roi.bin_y {
+        if roi.width > self.props.max_width / self.roi.bin_x
+            || roi.height > self.props.max_height / self.roi.bin_y
+        {
             return Err(Error::InvalidValue(
                 "ROI width and height must be positive".to_owned(),
             ));
@@ -1401,7 +1405,10 @@ impl CameraUnit for CameraUnitASI {
             "Current ROI: {} x {}, Bin: {}, Format: {:#?}",
             roi_md.width, roi_md.height, roi_md.bin, roi_md.fmt
         );
-        info!("New ROI: {} x {}, Bin: {}", roi.width, roi.height, roi.bin_x);
+        info!(
+            "New ROI: {} x {}, Bin: {}",
+            roi.width, roi.height, roi.bin_x
+        );
 
         roi_md.width = roi.width as i32;
         roi_md.height = roi.height as i32;
@@ -1409,7 +1416,10 @@ impl CameraUnit for CameraUnitASI {
 
         self.set_roi_format(&roi_md)?;
 
-        if self.set_start_pos(roi.x_min as i32, roi.y_min as i32).is_err() {
+        if self
+            .set_start_pos(roi.x_min as i32, roi.y_min as i32)
+            .is_err()
+        {
             self.set_roi_format(&roi_md_old)?;
         }
         self.roi = roi;
