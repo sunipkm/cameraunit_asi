@@ -24,7 +24,6 @@ fn main() {
     // automatically know it must look for a `libhello.a` file.
     println!("cargo:rustc-link-lib=ASICamera2");
     println!("cargo:rustc-link-lib=pthread");
-    println!("cargo:rustc-link-lib=rt");
     println!("cargo:rustc-link-lib=m");
     println!("cargo:rustc-link-lib=usb-1.0");
 
