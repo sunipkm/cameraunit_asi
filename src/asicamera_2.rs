@@ -20,7 +20,7 @@ use crate::zwo_ffi::*;
 use cameraunit::{
     CameraInfo, CameraUnit, DynamicSerialImage, Error, ImageMetaData, SerialImageBuffer, ROI,
 };
-use log::{info, warn};
+use log::warn;
 
 /// This object describes a ZWO ASI camera, and provides methods for control and image capture.
 ///
@@ -954,10 +954,10 @@ impl CameraUnit for CameraUnitASI {
             meta.add_extended_attrib(
                 "DARK_FRAME",
                 if !self.get_shutter_open().unwrap_or(false) {
-                        "True"
-                    } else {
-                        "False"
-                    },
+                    "True"
+                } else {
+                    "False"
+                },
             );
             img.set_metadata(meta);
 
@@ -1165,10 +1165,10 @@ impl CameraUnit for CameraUnitASI {
                 meta.add_extended_attrib(
                     "DARK_FRAME",
                     if !self.get_shutter_open().unwrap_or(false) {
-                            "True"
-                        } else {
-                            "False"
-                        },
+                        "True"
+                    } else {
+                        "False"
+                    },
                 );
                 img.set_metadata(meta);
                 Ok(img)
@@ -1386,7 +1386,10 @@ impl CameraUnit for CameraUnitASI {
             ));
         }
 
-        if !self.props.is_usb3_camera && self.camera_name().contains("ASI120") && roi.width * roi.height % 1024 != 0 {
+        if !self.props.is_usb3_camera
+            && self.camera_name().contains("ASI120")
+            && roi.width * roi.height % 1024 != 0
+        {
             return Err(Error::InvalidValue(
                 "ASI120 cameras require ROI width * height to be a multiple of 1024".to_owned(),
             ));
@@ -1400,15 +1403,6 @@ impl CameraUnit for CameraUnitASI {
         let mut roi_md = self.get_roi_format()?;
         let (_xs, _ys) = self.get_start_pos()?;
         let roi_md_old = roi_md.clone();
-
-        info!(
-            "Current ROI: {} x {}, Bin: {}, Format: {:#?}",
-            roi_md.width, roi_md.height, roi_md.bin, roi_md.fmt
-        );
-        info!(
-            "New ROI: {} x {}, Bin: {}",
-            roi.width, roi.height, roi.bin_x
-        );
 
         roi_md.width = roi.width as i32;
         roi_md.height = roi.height as i32;

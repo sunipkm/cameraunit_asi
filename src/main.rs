@@ -156,8 +156,7 @@ fn main() {
         if !dir_prefix.exists() {
             std::fs::create_dir_all(&dir_prefix).unwrap();
         }
-        let res = img
-            .savefits(&dir_prefix, "comic", Some(&cfg.progname), true, true);
+        let res = img.savefits(&dir_prefix, "comic", Some(&cfg.progname), true, true);
         if let Err(res) = res {
             let res = match res {
                 fitsio::errors::Error::ExistingFile(res) => res,

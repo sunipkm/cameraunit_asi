@@ -1,6 +1,6 @@
 #![cfg(not(windows))]
-mod zwo_ffi;
 mod asicamera_2;
+mod zwo_ffi;
 
 pub use asicamera_2::{
     get_camera_ids, num_cameras, open_camera, open_first_camera, ASICameraProps, ASIImageFormat,
@@ -8,7 +8,10 @@ pub use asicamera_2::{
 };
 
 /// Re-export of [`cameraunit`] crate.
-pub use cameraunit::{CameraInfo, CameraUnit, Error, ROI, DynamicSerialImage, SerialImageBuffer, OptimumExposureConfig, ImageMetaData};
+pub use cameraunit::{
+    CameraInfo, CameraUnit, DynamicSerialImage, Error, ImageMetaData, OptimumExposureConfig,
+    SerialImageBuffer, ROI,
+};
 
 #[cfg(test)]
 mod tests {
