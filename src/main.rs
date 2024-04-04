@@ -12,7 +12,7 @@ use std::{
 
 use cameraunit_asi::{
     num_cameras, open_first_camera, ASIImageFormat, CameraInfo, CameraUnit, DynamicSerialImage,
-    Error, OptimumExposureConfig, ROI,
+    Error, OptimumExposureBuilder, ROI,
 };
 use chrono::{DateTime, Local};
 use configparser::ini::Ini;
@@ -102,16 +102,16 @@ fn main() {
     .unwrap();
     cam.set_image_fmt(ASIImageFormat::ImageRAW16).unwrap();
     cam.set_exposure(Duration::from_millis(100)).unwrap();
-    let exp_ctrl = OptimumExposureConfig::new(
-        (cfg.percentile * 0.01) as f32,
-        cfg.target_val as f32,
-        cfg.target_uncertainty as f32,
-        100,
-        cam.get_min_exposure().unwrap_or(Duration::from_millis(1)),
-        cfg.max_exposure,
-        cfg.max_bin as u16,
-    )
-    .unwrap();
+    let exp_ctrl = OptimumExposureBuilder::default()
+        .percentile_pix((cfg.percentile * 0.01) as f32)
+        .pixel_tgt(cfg.target_val)
+        .pixel_uncertainty(cfg.target_uncertainty)
+        .pixel_exclusion(100)
+        .min_allowed_exp(cam.get_min_exposure().unwrap_or(Duration::from_millis(1)))
+        .max_allowed_exp(cfg.max_exposure)
+        .max_allowed_bin(cfg.max_bin as u16)
+        .build()
+        .unwrap();
     'main_loop: while !done.load(Ordering::SeqCst) {
         let mut img: DynamicSerialImage;
         let exp_start: DateTime<Local> = SystemTime::now().into();
@@ -184,7 +184,7 @@ fn main() {
             );
         }
         let (exposure, _bin) = exp_ctrl
-            .find_optimum_exposure(
+            .calculate(
                 img.into_luma().into_vec(),
                 img.get_metadata().unwrap().exposure,
                 img.get_metadata().unwrap().bin_x as u8,

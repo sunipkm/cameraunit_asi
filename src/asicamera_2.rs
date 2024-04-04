@@ -18,7 +18,8 @@ use std::{
 use crate::zwo_ffi::*;
 
 use cameraunit::{
-    CameraInfo, CameraUnit, DynamicSerialImage, Error, ImageMetaData, SerialImageBuffer, ROI,
+    CameraInfo, CameraUnit, DynamicSerialImage, Error, ImageMetaData, PixelBpp, SerialImageBuffer,
+    ROI,
 };
 use log::warn;
 
@@ -151,7 +152,7 @@ pub fn get_camera_ids() -> Option<HashMap<i32, String>> {
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use cameraunit_asi::open_camera;
 /// let id: i32 = 0; // some ID obtained using get_camera_ids()
 /// if let Ok((mut cam, caminfo)) = open_camera(id) {
@@ -310,7 +311,7 @@ pub fn open_camera(id: i32) -> Result<(CameraUnitASI, CameraInfoASI), Error> {
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use cameraunit_asi::open_first_camera;
 ///
 /// if let Ok((mut cam, caminfo)) = open_first_camera() {
@@ -1487,6 +1488,35 @@ impl CameraUnit for CameraUnitASI {
         let y = flipmode == ASI_FLIP_STATUS_ASI_FLIP_VERT as c_long
             || flipmode == ASI_FLIP_STATUS_ASI_FLIP_BOTH as c_long;
         (x, y)
+    }
+
+    fn set_bpp(&mut self, bpp: PixelBpp) -> Result<PixelBpp, Error> {
+        match bpp {
+            PixelBpp::Bpp8 => {
+                self.set_image_fmt(ASIImageFormat::ImageRAW8)?;
+                Ok(PixelBpp::Bpp8)
+            }
+            PixelBpp::Bpp16 => {
+                self.set_image_fmt(ASIImageFormat::ImageRAW16)?;
+                Ok(PixelBpp::Bpp16)
+            }
+            PixelBpp::Bpp24 => {
+                self.set_image_fmt(ASIImageFormat::ImageRGB24)?;
+                Ok(PixelBpp::Bpp24)
+            }
+            _ => Err(Error::InvalidValue(format!(
+                "Invalid pixel bit depth {:?}",
+                bpp
+            ))),
+        }
+    }
+
+    fn get_bpp(&self) -> cameraunit::PixelBpp {
+        match self.get_image_fmt() {
+            ASIImageFormat::ImageRAW8 => cameraunit::PixelBpp::Bpp8,
+            ASIImageFormat::ImageRAW16 => cameraunit::PixelBpp::Bpp16,
+            ASIImageFormat::ImageRGB24 => cameraunit::PixelBpp::Bpp24,
+        }
     }
 }
 
