@@ -1,6 +1,6 @@
 [package]
 name = "cameraunit_asi"
-version = "4.0.1"
+version = "4.0.2"
 edition = "2021"
 rust-version = "1.68.0"
 authors = ["Sunip K. Mukherjee"]
@@ -25,7 +25,7 @@ bench = false
 
 [dependencies]
 cameraunit = "5.0"
-chrono = "0.4.31"
+chrono = "0.4"
 configparser = "3.0.2"
 ctrlc = "3.4.1"
 fitsio = "0.21.2"
