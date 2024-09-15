@@ -20,16 +20,22 @@ fn main() {
 
     let headers_path_str = headers_path.to_str().expect("Path is not a valid string");
 
-    // Tell cargo to tell rustc to find ASICamera2 in LD_LIBRARY_PATH.
+    // Tell cargo to tell rustc to find ASICamera2 in LD_LIBRARY_PATH on Linux. This is not
+    // an issue on macOS.
     #[cfg(target_os = "linux")]
     {
         if let Ok(libdir) = std::env::var("LD_LIBRARY_PATH") {
-            let paths = libdir.split(":").collect::<Vec<&str>>();
+            let paths = libdir
+                .split(":")
+                .filter_map(|x| if x.is_empty() { None } else { Some(x) })
+                .collect::<Vec<&str>>();
             for path in paths {
                 println!("cargo:rustc-link-search={}", path);
             }
         } else {
-            panic!("LD_LIBRARY_PATH is not set. Please set it to the directory containing ASICamera2");
+            panic!(
+                "LD_LIBRARY_PATH is not set. Please set it to the directory containing ASICamera2"
+            );
         }
     }
     println!("cargo:rustc-link-lib=static=ASICamera2");
