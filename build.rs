@@ -34,7 +34,7 @@ fn main() {
             }
         } else {
             panic!(
-                "LD_LIBRARY_PATH is not set. Please set it to the directory containing ASICamera2"
+                "LD_LIBRARY_PATH is not set. Please set it to the directory containing ASICamera2: LD_LIBRARY_PATH=/path/to/ASICamera2:$LD_LIBRARY_PATH"
             );
         }
     }
