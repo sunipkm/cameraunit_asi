@@ -22,10 +22,14 @@ fn main() {
 
     // Tell cargo to tell rustc to link our `hello` library. Cargo will
     // automatically know it must look for a `libhello.a` file.
-    println!("cargo:rustc-link-lib=ASICamera2");
+    println!("cargo:rustc-link-lib=static=ASICamera2");
     println!("cargo:rustc-link-lib=pthread");
     println!("cargo:rustc-link-lib=m");
     println!("cargo:rustc-link-lib=usb-1.0");
+    #[cfg(target_os = "linux")]
+    println!("cargo:rustc-link-lib=stdc++");
+    #[cfg(target_os = "macos")]
+    println!("cargo:rustc-link-lib=c++");
 
     // The bindgen::Builder is the main entry point
     // to bindgen, and lets you build up options for
