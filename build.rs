@@ -38,7 +38,7 @@ fn main() {
             );
         }
     }
-    println!("cargo:rustc-link-lib=static=ASICamera2");
+    println!("cargo:rustc-link-lib=ASICamera2");
     println!("cargo:rustc-link-lib=pthread");
     println!("cargo:rustc-link-lib=m");
     println!("cargo:rustc-link-lib=usb-1.0");
